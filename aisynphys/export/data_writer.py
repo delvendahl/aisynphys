@@ -96,9 +96,9 @@ class ExperimentWriter:
 
         # Build cell_id to electrode mapping
         cell_to_electrode = {}
-        for elec_id, elec in expt.electrodes.items():
+        for elec in expt.electrodes:
             if elec.cell is not None:
-                cell_to_electrode[elec.cell.id] = elec_id
+                cell_to_electrode[elec.cell.id] = elec.device_id
 
         # Build postsynaptic cell to presynaptic electrodes mapping
         presynaptic_electrodes = {}

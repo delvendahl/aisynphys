@@ -23,8 +23,6 @@ class ExperimentWriter:
     def _get_or_create_dataset(self, out_file, cell_name, signal_key, dtype, electrode, expt):
         if self._h5f is None:
             self._h5f = h5py.File(out_file, "w")
-            # Disable HDF5 chunk cache to prevent memory accumulation
-            self._h5f.id.set_chunk_cache(0, 0, 0)
 
         key = (cell_name, signal_key)
         if key in self._datasets:

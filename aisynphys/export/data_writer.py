@@ -387,7 +387,7 @@ class ExperimentWriter:
 
         for pair in expt.pair_list:
             if pair.synapse:
-                syn_index[pair.post_cell_id] = pair
+                syn_index.setdefault(pair.post_cell_id, []).append(pair)
 
         return syn_index
 
@@ -404,32 +404,52 @@ class ExperimentWriter:
             'psp_fit_amplitude': None,
         }
 
-        pair = syn_index.get(cell_id)
-        if pair is None:
+        pairs = syn_index.get(cell_id)
+        
+        # If no pairs found or the list is empty, return default results
+        if not pairs:
             return results
 
-        syn = pair.synapse
+        # Initialize dictionaries to keep track of sums and counts for averaging
+        sums = {k: 0.0 for k in results}
+        counts = {k: 0 for k in results}
 
-        vc_fit = None
-        ic_fit = None
+        for pair in pairs:
+            syn = pair.synapse
+            
+            vc_fit = None
+            ic_fit = None
+            
+            # Extract fits for this specific pair
+            for fit in getattr(syn, "avg_response_fits", []):
+                mode = getattr(fit, "clamp_mode", None)
+                if mode == 'vc':
+                    vc_fit = getattr(fit, "fit_amp", None)
+                elif mode == 'ic':
+                    ic_fit = getattr(fit, "fit_amp", None)
+            
+            # Gather current metrics
+            current_values = {
+                'psc_amplitude': getattr(syn, 'psc_amplitude', None),
+                'psc_rise_time': getattr(syn, 'psc_rise_time', None),
+                'psc_decay_tau': getattr(syn, 'psc_decay_tau', None),
+                'psc_fit_amplitude': vc_fit,
+                'psp_amplitude': getattr(syn, 'psp_amplitude', None),
+                'psp_rise_time': getattr(syn, 'psp_rise_time', None),
+                'psp_decay_tau': getattr(syn, 'psp_decay_tau', None),
+                'psp_fit_amplitude': ic_fit,
+            }
 
-        for fit in getattr(syn, "avg_response_fits", []):
-            mode = getattr(fit, "clamp_mode", None)
-            if mode == 'vc':
-                vc_fit = getattr(fit, "fit_amp", None)
-            elif mode == 'ic':
-                ic_fit = getattr(fit, "fit_amp", None)
+            # Accumulate sums and counts, ignoring None values
+            for key, val in current_values.items():
+                if val is not None:
+                    sums[key] += val
+                    counts[key] += 1
 
-        results.update({
-            'psc_amplitude': getattr(syn, 'psc_amplitude', None),
-            'psc_rise_time': getattr(syn, 'psc_rise_time', None),
-            'psc_decay_tau': getattr(syn, 'psc_decay_tau', None),
-            'psc_fit_amplitude': vc_fit,
-            'psp_amplitude': getattr(syn, 'psp_amplitude', None),
-            'psp_rise_time': getattr(syn, 'psp_rise_time', None),
-            'psp_decay_tau': getattr(syn, 'psp_decay_tau', None),
-            'psp_fit_amplitude': ic_fit,
-        })
+        # Calculate the average for each parameter
+        for key in results:
+            if counts[key] > 0:
+                results[key] = sums[key] / counts[key]
 
         return results
 
@@ -486,6 +506,9 @@ class ExperimentWriter:
 
             "apical_trunc_distance": getattr(morph, "apical_trunc_distance", None),
             "qual_morpho_type": getattr(morph, "qual_morpho_type", None),
+            # --- Synapse ---
+            "has_synapse": True if cell.id in syn_index else False,
+            "presynaptic_cell_ids": [pair.pre_cell_id for pair in syn_index.get(cell.id, [])],
 
             # --- Experiment ---
             "expt_id": expt.id,

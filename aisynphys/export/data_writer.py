@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from .constants import INTRINSIC_FIELDS
 
+
 class ExperimentWriter:
     CONDITIONS = {0: -55, 1: -70}
     BLANK_ADD_TIME = 0.02

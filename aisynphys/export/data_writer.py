@@ -336,6 +336,8 @@ class ExperimentWriter:
                 if stim in ['MIES_Blowout_DA_0', 'Chirp_DA_0', 'Mixedf_DA_0']:
                     holding = 'NaN'
                 else:
+                    if rec.holding_potential is None:
+                        continue
                     holding = np.round(rec.holding_potential * 1e3)
 
                 if electrode_id not in index:
